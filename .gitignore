@@ -5,6 +5,8 @@ test/
 # Ignore node_modules
 node_modules/
 
+.env
+
 # Ignore IDE & OS
 .vscode/
 .idea/
