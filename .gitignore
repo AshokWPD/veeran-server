@@ -1,0 +1,12 @@
+# Ignore source
+src/
+test/
+
+# Ignore node_modules
+node_modules/
+
+# Ignore IDE & OS
+.vscode/
+.idea/
+.DS_Store
+

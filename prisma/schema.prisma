@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+model Admin {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String
+  name             String
+  role             String    @default("admin")
+  isActive         Boolean   @default(true)
+  isSuperAdmin     Boolean   @default(false)
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Account {
+  id            String   @id @default(uuid())
+  name          String
+  type          String
+  accountNumber String?
+  balance       Float    @default(0)
+  holderName    String?
+  description   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  transactions              Transaction[]
+  relatedTransactions       Transaction[]   @relation("RelatedTransactions")
+
+  @@map("accounts")
+  @@index([balance])
+  @@index([type])
+}
+
+model Transaction {
+  id               String   @id @default(uuid())
+  accountId        String
+  amount           Float
+  direction        String
+  type             String
+  subType          String?
+  description      String?
+  status           String   @default("COMPLETED")
+  referenceNumber  String?
+  relatedAccountId String?
+  commission       Float    @default(0)
+  netAmount        Float
+  profit           Float    @default(0)
+  metadata         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  account        Account  @relation(fields: [accountId], references: [id])
+  relatedAccount Account? @relation("RelatedTransactions", fields: [relatedAccountId], references: [id])
+  bill           Bill?    @relation(fields: [billId], references: [id])
+  billId         String?
+
+  @@index([accountId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([referenceNumber])
+}
+
+model Service {
+  id              String     @id @default(uuid())
+  name            String
+  category        String
+  serviceType     String
+  defaultPrice    Float
+  commissionRate  Float?
+  minAmount       Float?
+  maxAmount       Float?
+  hasOnlineCharge Boolean    @default(false)
+  onlineCharge    Float?
+  description     String?
+  instructions    String?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  billItems       BillItem[]
+
+  @@map("services")
+}
+
+model Bill {
+  id                  String   @id @default(uuid())
+  billNumber          String   @unique
+  customerId          String?
+  customerName        String?
+  customerPhone       String?
+  totalAmount         Float
+  taxAmount           Float    @default(0)
+  discount            Float    @default(0)
+  netAmount           Float
+  commission          Float    @default(0)
+  profit              Float    @default(0)
+  paymentMode         String
+  paymentStatus       String   @default("PENDING")
+  billStatus          String   @default("ACTIVE")
+  accountId           String?
+  notes               String?
+  serviceType         String?
+  splitPayments       Json?
+  accountTransactions Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  items         BillItem[]
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  transactions  Transaction[]
+
+  @@index([billNumber])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([paymentStatus])
+  @@index([billStatus])
+  @@map("bills")
+}
+
+model BillItem {
+  id          String   @id @default(uuid())
+  billId      String
+  serviceId   String?
+  itemType    String
+  itemName    String
+  quantity    Int      @default(1)
+  price       Float
+  costPrice   Float?
+  commission  Float    @default(0)
+  profit      Float    @default(0)
+  totalAmount Float
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bill    Bill     @relation(fields: [billId], references: [id])
+  service Service? @relation(fields: [serviceId], references: [id])
+
+  @@index([billId])
+  @@index([serviceId])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bills     Bill[]
+}
