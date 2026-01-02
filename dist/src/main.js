@@ -54,6 +54,7 @@ async function bootstrap() {
         origin: [
             'http://localhost:3001',
             'http://bill.asho.in',
+            'http://api.asho.in',
             'https://studio.asho.in',
         ],
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
