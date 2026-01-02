@@ -15,7 +15,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  app.use(helmet());
+  // app.use(helmet());
 
   // Enable CORS with specific origin allowed
   app.enableCors({
