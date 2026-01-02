@@ -1,5 +1,4 @@
 # Ignore source
-src/
 test/
 
 # Ignore node_modules
