@@ -15,14 +15,33 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  // app.use(helmet());
-
+// Replace helmet configuration with:
+app.use(
+  helmet({
+    // Disable problematic headers for Swagger
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+    crossOriginEmbedderPolicy: false,
+    
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
+        imgSrc: ["'self'", "data:", "https:", "http:"],
+        fontSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https:", "http:"],
+      },
+    },
+  }),
+);
   // Enable CORS with specific origin allowed
   app.enableCors({
     origin: [
       'http://localhost:3001',
       'http://bill.asho.in',
       'http://api.asho.in',
+      'https://api.asho.in',
       'https://studio.asho.in',
     ], // Update this to your frontend URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
