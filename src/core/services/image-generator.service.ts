@@ -66,8 +66,33 @@ export class ImageGeneratorService {
 
 private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
   try {
-    // Use node-html-to-image (if installed)
     const nodeHtmlToImage = require('node-html-to-image');
+    
+    // Try different Chrome paths
+    const chromePaths = [
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/chromium/current/chromium',
+      '/snap/chromium/3338/chromium',
+      '/snap/bin/chromium'
+    ];
+    
+    let executablePath: string | undefined;
+    for (const path of chromePaths) {
+      if (fs.existsSync(path)) {
+        executablePath = path;
+        this.logger.log(`Found Chrome at: ${executablePath}`);
+        break;
+      }
+    }
+    
+    if (!executablePath) {
+      this.logger.warn('Chrome not found, using fallback image');
+      await this.createFallbackImage(outputPath);
+      return;
+    }
     
     await nodeHtmlToImage({
       output: outputPath,
@@ -76,43 +101,65 @@ private async generateImageFromHtml(html: string, outputPath: string): Promise<v
       type: 'png',
       transparent: false,
       puppeteerArgs: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         defaultViewport: {
           width: 1024,
           height: 512,
         },
-        // Try to use system Chrome if available
-        executablePath: process.env.CHROME_PATH || undefined,
+        executablePath: executablePath,
+        headless: 'new',
       },
     });
     
   } catch (error) {
     this.logger.error('Error generating image with node-html-to-image:', error);
-    // Fallback to simple text image
+    // Fallback to simple image
     await this.createFallbackImage(outputPath);
   }
 }
 
 private async createFallbackImage(outputPath: string): Promise<void> {
-  // Create a simple fallback image
-  const simpleHtml = `
-    <html>
-      <body style="margin:0; padding:20px; background:#0f172a; color:white; font-family:Arial; width:1024px; height:512px;">
-        <h1>Payment Notification</h1>
-        <p>Image generation failed due to server constraints.</p>
-        <p>Please check the bill details in your account.</p>
-      </body>
-    </html>
-  `;
-  
-  // Save as HTML file instead of image
-  const htmlPath = outputPath.replace('.png', '.html');
-  fs.writeFileSync(htmlPath, simpleHtml);
-  
-  // Copy a placeholder image
-  const placeholderPath = path.join(__dirname, '..', '..', 'public', 'placeholder.png');
-  if (fs.existsSync(placeholderPath)) {
-    fs.copyFileSync(placeholderPath, outputPath);
+  try {
+    // Create a simple text-based fallback image
+    const simpleHtml = `
+      <div style="
+        width: 1024px; 
+        height: 512px; 
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+        font-family: Arial;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      ">
+        <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px;">💰</div>
+        <h1 style="font-size: 36px; margin-bottom: 20px;">Payment Received</h1>
+        <p style="font-size: 24px; opacity: 0.8;">Notification details available in your account</p>
+        <p style="margin-top: 40px; font-size: 18px; opacity: 0.6;">Image generation temporarily unavailable</p>
+      </div>
+    `;
+    
+    // Try to save as HTML for debugging
+    const htmlPath = outputPath.replace('.png', '.html');
+    fs.writeFileSync(htmlPath, simpleHtml);
+    this.logger.log(`Created fallback HTML at: ${htmlPath}`);
+    
+    // Copy a placeholder if exists, otherwise create empty file
+    const placeholderPath = path.join(process.cwd(), 'uploads', 'placeholder.png');
+    if (fs.existsSync(placeholderPath)) {
+      fs.copyFileSync(placeholderPath, outputPath);
+    } else {
+      // Create empty file or minimal PNG
+      fs.writeFileSync(outputPath, '');
+    }
+    
+  } catch (error) {
+    this.logger.error('Error creating fallback image:', error);
+    // Just create empty file
+    fs.writeFileSync(outputPath, '');
   }
 }
 
