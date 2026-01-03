@@ -1,20 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import nodeHtmlToImage from 'node-html-to-image';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import * as os from 'os';
+
+// Import html-to-image properly
+const htmlToImage = require('html-to-image');
 
 @Injectable()
 export class ImageGeneratorService {
   private readonly logger = new Logger(ImageGeneratorService.name);
   private readonly uploadPath: string;
-  private readonly platform: string;
 
   constructor(private configService: ConfigService) {
     this.uploadPath = path.join(process.cwd(), 'uploads', 'notifications');
-    this.platform = os.platform(); // 'win32', 'linux', 'darwin'
     this.ensureDirectoryExists();
   }
 
@@ -22,63 +21,6 @@ export class ImageGeneratorService {
     if (!fs.existsSync(this.uploadPath)) {
       fs.mkdirSync(this.uploadPath, { recursive: true });
     }
-  }
-
-  private getPuppeteerConfig(): any {
-    const args = ['--no-sandbox', '--disable-setuid-sandbox'];
-    
-    // Platform-specific configurations
-    if (this.platform === 'linux') {
-      args.push('--disable-dev-shm-usage');
-      args.push('--disable-gpu');
-    }
-    
-    // Try to find Chrome/Chromium executable
-    let executablePath: string | undefined;
-    
-    if (this.platform === 'win32') {
-      // Windows paths
-      const windowsPaths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      ];
-      
-      for (const possiblePath of windowsPaths) {
-        if (fs.existsSync(possiblePath)) {
-          executablePath = possiblePath;
-          break;
-        }
-      }
-    } // In your getPuppeteerConfig() method, add snap paths:
- else if (this.platform === 'linux') {
-  // Linux paths (AWS)
-  const linuxPaths = [
-    '/snap/chromium/current/chromium',
-    '/snap/chromium/3338/chromium',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome',
-  ];
-  
-  for (const possiblePath of linuxPaths) {
-    if (fs.existsSync(possiblePath)) {
-      executablePath = possiblePath;
-      this.logger.log(`Using browser at: ${executablePath}`);
-      break;
-    }
-  }
-}
-    
-    return {
-      args,
-      defaultViewport: {
-        width: 1024,
-        height: 512,
-      },
-      executablePath,
-      headless: true,
-    };
   }
 
   async generateNotificationImage(
@@ -91,7 +33,6 @@ export class ImageGeneratorService {
     try {
       const logoUrl = this.configService.get<string>('LOGO_URL', '');
       this.logger.log(`Logo URL: ${logoUrl}`);
-      this.logger.log(`Platform: ${this.platform}`);
       
       const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
       
@@ -100,14 +41,8 @@ export class ImageGeneratorService {
       
       this.logger.log(`Generating image at: ${filepath}`);
       
-      // Handle different platforms
-      if (this.platform === 'win32') {
-        // Windows development
-        await this.generateImageForWindows(template, filepath);
-      } else {
-        // Linux/Mac (including AWS)
-        await this.generateImageForLinux(template, filepath);
-      }
+      // Generate image using html-to-image
+      await this.generateImageFromHtml(template, filepath);
 
       // Check if file was created
       if (fs.existsSync(filepath)) {
@@ -115,7 +50,6 @@ export class ImageGeneratorService {
         this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
       } else {
         this.logger.error(`Image file was not created: ${filepath}`);
-        throw new Error('Failed to create image file');
       }
 
       // Return public URL
@@ -130,47 +64,55 @@ export class ImageGeneratorService {
     }
   }
 
-  private async generateImageForWindows(html: string, outputPath: string): Promise<void> {
+  private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
     try {
-      // For Windows, let node-html-to-image handle Chrome download automatically
-      await nodeHtmlToImage({
-        output: outputPath,
-        html: html,
-        quality: 100,
-        type: 'png',
-        transparent: false,
-        puppeteerArgs: {
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-          defaultViewport: {
-            width: 1024,
-            height: 512,
-          },
-        },
-      });
-    } catch (error) {
-      this.logger.error('Windows image generation failed:', error);
-      throw error;
-    }
-  }
-
-  private async generateImageForLinux(html: string, outputPath: string): Promise<void> {
-    try {
-      const puppeteerArgs = this.getPuppeteerConfig();
+      // Create a temporary HTML file
+      const tempHtmlPath = path.join(this.uploadPath, 'temp.html');
+      fs.writeFileSync(tempHtmlPath, html);
       
-      await nodeHtmlToImage({
-        output: outputPath,
-        html: html,
-        quality: 100,
-        type: 'png',
-        transparent: false,
-        puppeteerArgs: puppeteerArgs,
+      // Create a virtual DOM using jsdom
+      const { JSDOM } = await import('jsdom');
+      const dom = new JSDOM(html, {
+        resources: 'usable',
+        runScripts: 'dangerously'
       });
+      
+      const document = dom.window.document;
+      
+      // Wait for resources to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get the body element
+      const body = document.body;
+      
+      // Set canvas dimensions
+      body.style.width = '1024px';
+      body.style.height = '512px';
+      
+      // Generate PNG using html-to-image
+      const dataUrl = await htmlToImage.toPng(body, {
+        width: 1024,
+        height: 512,
+        backgroundColor: '#0f172a',
+        quality: 1.0,
+        pixelRatio: 2,
+        skipAutoScale: true,
+      });
+      
+      // Save to file
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(outputPath, buffer);
+      
+      // Clean up temp file
+      if (fs.existsSync(tempHtmlPath)) {
+        fs.unlinkSync(tempHtmlPath);
+      }
     } catch (error) {
-      this.logger.error('Linux image generation failed:', error);
+      this.logger.error('Error generating image:', error);
       throw error;
     }
   }
-
 
   private getNotificationTemplate(
     amount: number,
