@@ -1,0 +1,100 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const core_1 = require("@nestjs/core");
+const app_module_1 = require("./app.module");
+const helmet_1 = __importDefault(require("helmet"));
+const swagger_1 = require("@nestjs/swagger");
+const dotenv = __importStar(require("dotenv"));
+const common_1 = require("@nestjs/common");
+const path_1 = require("path");
+const express = __importStar(require("express"));
+dotenv.config();
+async function bootstrap() {
+    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.useGlobalPipes(new common_1.ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+    }));
+    app.use('/uploads', express.static((0, path_1.join)(process.cwd(), 'uploads')));
+    app.use((0, helmet_1.default)({
+        crossOriginOpenerPolicy: false,
+        crossOriginResourcePolicy: false,
+        crossOriginEmbedderPolicy: false,
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
+                imgSrc: ["'self'", "data:", "https:", "http:"],
+                fontSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'", "https:", "http:"],
+            },
+        },
+    }));
+    app.enableCors({
+        origin: [
+            'http://localhost:3001',
+            'http://bill.asho.in',
+            'http://api.asho.in',
+            'https://api.asho.in',
+            'https://studio.asho.in',
+        ],
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        allowedHeaders: 'Content-Type, Accept, Authorization',
+        credentials: true,
+    });
+    const config = new swagger_1.DocumentBuilder()
+        .setTitle('E-Commerce API')
+        .setDescription('API for E-Commerce Backend')
+        .setVersion('1.0')
+        .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter JWT token',
+        in: 'header',
+    }, 'JWT-auth')
+        .build();
+    const document = swagger_1.SwaggerModule.createDocument(app, config);
+    swagger_1.SwaggerModule.setup('api', app, document);
+    await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+}
+bootstrap();
+//# sourceMappingURL=main.js.map
