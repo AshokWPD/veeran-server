@@ -6,6 +6,8 @@ export declare class ImageGeneratorService {
     constructor(configService: ConfigService);
     private ensureDirectoryExists;
     generateNotificationImage(billNumber: string, amount: number, commission: number, customerName?: string, serviceType?: string): Promise<string>;
+    private generateImageFromHtml;
+    private generateImageSimple;
     private getNotificationTemplate;
     cleanupOldImages(maxAgeHours?: number): Promise<void>;
 }

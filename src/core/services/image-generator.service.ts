@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import nodeHtmlToImage from 'node-html-to-image';
+import * as htmlToImage from 'html-to-image';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -22,58 +22,140 @@ export class ImageGeneratorService {
   }
 
   async generateNotificationImage(
-  billNumber: string,
-  amount: number,
-  commission: number,
-  customerName?: string,
-  serviceType?: string,
-): Promise<string> {
-  try {
-    const logoUrl = this.configService.get<string>('LOGO_URL', '');
-    this.logger.log(`Logo URL: ${logoUrl}`);
-    
-    const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
-    
-    const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
-    const filepath = path.join(this.uploadPath, filename);
-    
-    this.logger.log(`Generating image at: ${filepath}`);
-    
-    await nodeHtmlToImage({
-      output: filepath,
-      html: template,
-      quality: 100,
-      type: 'png',
-      transparent: false,
-      content: { amount, commission, customerName, serviceType },
-      puppeteerArgs: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: {
-          width: 1024,
-          height: 512,
-        },
-      },
-    });
+    billNumber: string,
+    amount: number,
+    commission: number,
+    customerName?: string,
+    serviceType?: string,
+  ): Promise<string> {
+    try {
+      const logoUrl = this.configService.get<string>('LOGO_URL', '');
+      this.logger.log(`Logo URL: ${logoUrl}`);
+      
+      const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
+      
+      const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
+      const filepath = path.join(this.uploadPath, filename);
+      
+      this.logger.log(`Generating image at: ${filepath}`);
+      
+      // Generate image using html-to-image
+      await this.generateImageFromHtml(template, filepath);
 
-    // Check if file was created
-    if (fs.existsSync(filepath)) {
-      const stats = fs.statSync(filepath);
-      this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
-    } else {
-      this.logger.error(`Image file was not created: ${filepath}`);
+      // Check if file was created
+      if (fs.existsSync(filepath)) {
+        const stats = fs.statSync(filepath);
+        this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
+      } else {
+        this.logger.error(`Image file was not created: ${filepath}`);
+      }
+
+      // Return public URL
+      const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+      const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
+      this.logger.log(`Image URL: ${imageUrl}`);
+      
+      return imageUrl;
+    } catch (error) {
+      this.logger.error('Failed to generate notification image:', error);
+      throw error;
     }
-
-    // Return public URL
-    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
-    const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
-    this.logger.log(`Image URL: ${imageUrl}`);
-    
-    return imageUrl;
-  } catch (error) {
-    this.logger.error('Failed to generate notification image:', error);
-    throw error;
   }
-}
+
+  private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
+    try {
+      // Create a temporary HTML file
+      const tempHtmlPath = path.join(this.uploadPath, 'temp.html');
+      fs.writeFileSync(tempHtmlPath, html);
+      
+      // Read the HTML file
+      const htmlContent = fs.readFileSync(tempHtmlPath, 'utf-8');
+      
+      // Create a virtual DOM element
+      const { JSDOM } = await import('jsdom');
+      const dom = new JSDOM(htmlContent);
+      const document = dom.window.document;
+      
+      // Get the body element
+      const body = document.body;
+      
+      // Generate the image
+      await htmlToImage.toPng(body as any, {
+        quality: 1.0,
+        width: 1024,
+        height: 512,
+        backgroundColor: '#0f172a',
+        style: {
+          margin: '0',
+          padding: '0'
+        }
+      }).then((dataUrl: string) => {
+        // Convert base64 to buffer and save
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(outputPath, buffer);
+      });
+      
+      // Clean up temp file
+      if (fs.existsSync(tempHtmlPath)) {
+        fs.unlinkSync(tempHtmlPath);
+      }
+    } catch (error) {
+      this.logger.error('Error generating image:', error);
+      throw error;
+    }
+  }
+
+  // Alternative simpler method if the above doesn't work
+  private async generateImageSimple(html: string, outputPath: string): Promise<void> {
+    try {
+      // Install jsdom if not already installed
+      // npm install jsdom @types/jsdom
+      
+      const { JSDOM } = await import('jsdom');
+      
+      // Create DOM from HTML
+      const dom = new JSDOM(html, {
+        resources: 'usable',
+        runScripts: 'dangerously'
+      });
+      
+      const document = dom.window.document;
+      
+      // Wait for resources to load
+      await new Promise(resolve => {
+        if (document.readyState === 'complete') {
+          resolve(true);
+        } else {
+          document.addEventListener('load', resolve);
+          document.addEventListener('DOMContentLoaded', resolve);
+        }
+      });
+      
+      // Get the body element
+      const body = document.body;
+      
+      // Generate PNG
+      const pngDataUrl = await htmlToImage.toPng(body as any, {
+        quality: 1.0,
+        pixelRatio: 2,
+        width: 1024,
+        height: 512,
+        backgroundColor: '#0f172a',
+        skipAutoScale: true,
+      });
+      
+      // Save to file
+      const base64Data = pngDataUrl.replace(/^data:image\/png;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(outputPath, buffer);
+      
+    } catch (error) {
+      this.logger.error('Error in generateImageSimple:', error);
+      throw error;
+    }
+  }
+
 
   private getNotificationTemplate(
     amount: number,

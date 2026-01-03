@@ -41,15 +41,12 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 var ImageGeneratorService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ImageGeneratorService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const node_html_to_image_1 = __importDefault(require("node-html-to-image"));
+const htmlToImage = __importStar(require("html-to-image"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const crypto = __importStar(require("crypto"));
@@ -75,21 +72,7 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
             const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
             const filepath = path.join(this.uploadPath, filename);
             this.logger.log(`Generating image at: ${filepath}`);
-            await (0, node_html_to_image_1.default)({
-                output: filepath,
-                html: template,
-                quality: 100,
-                type: 'png',
-                transparent: false,
-                content: { amount, commission, customerName, serviceType },
-                puppeteerArgs: {
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                    defaultViewport: {
-                        width: 1024,
-                        height: 512,
-                    },
-                },
-            });
+            await this.generateImageFromHtml(template, filepath);
             if (fs.existsSync(filepath)) {
                 const stats = fs.statSync(filepath);
                 this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
@@ -104,6 +87,73 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
         }
         catch (error) {
             this.logger.error('Failed to generate notification image:', error);
+            throw error;
+        }
+    }
+    async generateImageFromHtml(html, outputPath) {
+        try {
+            const tempHtmlPath = path.join(this.uploadPath, 'temp.html');
+            fs.writeFileSync(tempHtmlPath, html);
+            const htmlContent = fs.readFileSync(tempHtmlPath, 'utf-8');
+            const { JSDOM } = await import('jsdom');
+            const dom = new JSDOM(htmlContent);
+            const document = dom.window.document;
+            const body = document.body;
+            await htmlToImage.toPng(body, {
+                quality: 1.0,
+                width: 1024,
+                height: 512,
+                backgroundColor: '#0f172a',
+                style: {
+                    margin: '0',
+                    padding: '0'
+                }
+            }).then((dataUrl) => {
+                const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+                const buffer = Buffer.from(base64Data, 'base64');
+                fs.writeFileSync(outputPath, buffer);
+            });
+            if (fs.existsSync(tempHtmlPath)) {
+                fs.unlinkSync(tempHtmlPath);
+            }
+        }
+        catch (error) {
+            this.logger.error('Error generating image:', error);
+            throw error;
+        }
+    }
+    async generateImageSimple(html, outputPath) {
+        try {
+            const { JSDOM } = await import('jsdom');
+            const dom = new JSDOM(html, {
+                resources: 'usable',
+                runScripts: 'dangerously'
+            });
+            const document = dom.window.document;
+            await new Promise(resolve => {
+                if (document.readyState === 'complete') {
+                    resolve(true);
+                }
+                else {
+                    document.addEventListener('load', resolve);
+                    document.addEventListener('DOMContentLoaded', resolve);
+                }
+            });
+            const body = document.body;
+            const pngDataUrl = await htmlToImage.toPng(body, {
+                quality: 1.0,
+                pixelRatio: 2,
+                width: 1024,
+                height: 512,
+                backgroundColor: '#0f172a',
+                skipAutoScale: true,
+            });
+            const base64Data = pngDataUrl.replace(/^data:image\/png;base64,/, '');
+            const buffer = Buffer.from(base64Data, 'base64');
+            fs.writeFileSync(outputPath, buffer);
+        }
+        catch (error) {
+            this.logger.error('Error in generateImageSimple:', error);
             throw error;
         }
     }
