@@ -66,16 +66,37 @@ export class ImageGeneratorService {
 
 private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
   try {
-    // Use html-to-image with jsdom
-    const { toPng } = await import('html-to-image');
+    // First, set up JSDOM with canvas support
     const { JSDOM } = await import('jsdom');
     
-    // Create DOM
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    // Create DOM with canvas support
+    const dom = new JSDOM(html, {
+      resources: 'usable',
+      runScripts: 'dangerously',
+      pretendToBeVisual: true,
+      url: 'http://localhost'
+    });
     
-    // Get body element
-    const body = document.body;
+    // Mock Canvas if not available
+    const { window } = dom;
+    
+    // Add missing browser globals
+    if (typeof (global as any).window === 'undefined') {
+      (global as any).window = window;
+      (global as any).document = window.document;
+      (global as any).HTMLElement = window.HTMLElement;
+      (global as any).HTMLCanvasElement = window.HTMLCanvasElement;
+      (global as any).Image = window.Image;
+    }
+    
+    // Wait for resources to load
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Get the body element
+    const body = dom.window.document.body;
+    
+    // Now import html-to-image AFTER setting up globals
+    const { toPng } = await import('html-to-image');
     
     // Generate image
     const dataUrl = await toPng(body, {
@@ -83,12 +104,16 @@ private async generateImageFromHtml(html: string, outputPath: string): Promise<v
       height: 512,
       backgroundColor: '#0f172a',
       quality: 1.0,
+      skipAutoScale: true,
+      pixelRatio: 2,
+      cacheBust: true,
     });
     
     // Save to file
     const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     fs.writeFileSync(outputPath, buffer);
+    
   } catch (error) {
     this.logger.error('Error generating image:', error);
     throw error;
