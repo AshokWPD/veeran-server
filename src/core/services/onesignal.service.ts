@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -34,20 +34,40 @@ export class OneSignalService {
         return null;
       }
 
-      const payload = {
+      this.logger.log(`Sending notification to ${playerIds.length} players`);
+      this.logger.log(`Image URL for notification: ${imageUrl}`);
+
+      // IMPORTANT: For OneSignal, you need to use specific fields for images
+      const payload: any = {
         app_id: this.appId,
         include_player_ids: playerIds,
         headings: { en: title },
         contents: { en: message },
         data: data || {},
-        big_picture: imageUrl,
-        chrome_web_image: imageUrl,
-        chrome_web_icon: this.configService.get('LOGO_URL', ''),
-        chrome_icon: this.configService.get('LOGO_URL', ''),
-        android_accent_color: this.configService.get('NOTIFICATION_ACCENT_COLOR', 'FF5722'),
-        small_icon: this.configService.get('LOGO_URL', ''),
+        // For iOS
+        ios_attachments: imageUrl ? { id1: imageUrl } : undefined,
+        // For Android
         large_icon: this.configService.get('LOGO_URL', ''),
+        android_led_color: 'FF5722FF',
+        android_accent_color: 'FF5722',
+        // IMPORTANT: Use big_picture for Android notifications
+        big_picture: imageUrl,
+        // For Chrome/Web
+        chrome_web_image: imageUrl,
+        // For all platforms
+        adm_big_picture: imageUrl, // For Amazon devices
+        chrome_big_picture: imageUrl, // For Chrome
       };
+
+      // If image is provided, add it to the notification
+      if (imageUrl) {
+        // OneSignal needs the image to be publicly accessible
+        payload.ios_attachments = { image: imageUrl };
+        payload.big_picture = imageUrl;
+        payload.chrome_web_image = imageUrl;
+        payload.firefox_icon = imageUrl;
+        payload.chrome_icon = imageUrl;
+      }
 
       const response = await axios.post(
         `${this.baseUrl}/notifications`,
@@ -60,30 +80,43 @@ export class OneSignalService {
         },
       );
 
-      this.logger.log(`Notification sent successfully: ${response.data.id}`);
+      this.logger.log(`Notification sent successfully. ID: ${response.data.id}`);
+      this.logger.log(`Notification recipients: ${response.data.recipients}`);
+      
       return response.data;
     } catch (error) {
       this.logger.error('Failed to send OneSignal notification:', error.response?.data || error.message);
+      if (error.response) {
+        this.logger.error('OneSignal API Error Details:', error.response.data);
+      }
       throw error;
     }
   }
 
-  async sendNotificationToAllAdmins(title: string, message: string, data?: Record<string, any>, imageUrl?: string) {
+  // For sending to all users (if needed)
+  async sendNotificationToAllUsers(
+    title: string,
+    message: string,
+    data?: Record<string, any>,
+    imageUrl?: string,
+  ) {
     try {
-      const payload = {
+      const payload: any = {
         app_id: this.appId,
-        included_segments: ['Subscribed Users'],
+        included_segments: ['All'],
         headings: { en: title },
         contents: { en: message },
         data: data || {},
         big_picture: imageUrl,
         chrome_web_image: imageUrl,
-        chrome_web_icon: this.configService.get('LOGO_URL', ''),
-        chrome_icon: this.configService.get('LOGO_URL', ''),
-        android_accent_color: this.configService.get('NOTIFICATION_ACCENT_COLOR', 'FF5722'),
-        small_icon: this.configService.get('LOGO_URL', ''),
         large_icon: this.configService.get('LOGO_URL', ''),
+        android_accent_color: 'FF5722',
       };
+
+      if (imageUrl) {
+        payload.ios_attachments = { image: imageUrl };
+        payload.big_picture = imageUrl;
+      }
 
       const response = await axios.post(
         `${this.baseUrl}/notifications`,
@@ -96,7 +129,7 @@ export class OneSignalService {
         },
       );
 
-      this.logger.log(`Bulk notification sent successfully: ${response.data.id}`);
+      this.logger.log(`Bulk notification sent. ID: ${response.data.id}`);
       return response.data;
     } catch (error) {
       this.logger.error('Failed to send bulk notification:', error.response?.data || error.message);

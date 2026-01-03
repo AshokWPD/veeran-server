@@ -55,7 +55,7 @@ let NotificationService = NotificationService_1 = class NotificationService {
             }
             const imageUrl = await this.imageGenerator.generateNotificationImage(event.billNumber, event.totalAmount, event.commission, event.customerName, event.serviceType);
             const title = `💰 பில் உருவாக்கப்பட்டது!`;
-            const message = `பில் எண்: ${event.billNumber} | தொகை: ₹${event.totalAmount.toLocaleString('en-IN')}`;
+            const message = `பில் தொகை: ₹${event.totalAmount.toLocaleString('en-IN')}`;
             const notificationData = {
                 billId: event.billId,
                 billNumber: event.billNumber,
@@ -103,13 +103,13 @@ let NotificationService = NotificationService_1 = class NotificationService {
         });
     }
     async cleanupNotificationImages() {
-        await this.imageGenerator.cleanupOldImages(24);
+        await this.imageGenerator.cleanupOldImages(4);
         this.logger.log('Cleaned up old notification images');
     }
 };
 exports.NotificationService = NotificationService;
 __decorate([
-    (0, schedule_1.Cron)(schedule_1.CronExpression.EVERY_DAY_AT_MIDNIGHT),
+    (0, schedule_1.Cron)(schedule_1.CronExpression.EVERY_4_HOURS),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)

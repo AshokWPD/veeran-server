@@ -7,5 +7,5 @@ export declare class OneSignalService {
     private readonly baseUrl;
     constructor(configService: ConfigService);
     sendPushNotification(playerIds: string[], title: string, message: string, data?: Record<string, any>, imageUrl?: string): Promise<any>;
-    sendNotificationToAllAdmins(title: string, message: string, data?: Record<string, any>, imageUrl?: string): Promise<any>;
+    sendNotificationToAllUsers(title: string, message: string, data?: Record<string, any>, imageUrl?: string): Promise<any>;
 }

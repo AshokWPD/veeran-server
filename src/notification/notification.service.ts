@@ -69,7 +69,7 @@ export class NotificationService implements OnModuleInit {
 
       // Prepare notification data
       const title = `💰 பில் உருவாக்கப்பட்டது!`;
-      const message = `பில் எண்: ${event.billNumber} | தொகை: ₹${event.totalAmount.toLocaleString('en-IN')}`;
+      const message = `பில் தொகை: ₹${event.totalAmount.toLocaleString('en-IN')}`;
       
       const notificationData = {
         billId: event.billId,
@@ -142,9 +142,9 @@ export class NotificationService implements OnModuleInit {
     });
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_4_HOURS)
   async cleanupNotificationImages() {
-    await this.imageGenerator.cleanupOldImages(24);
+    await this.imageGenerator.cleanupOldImages(4);
     this.logger.log('Cleaned up old notification images');
   }
 }

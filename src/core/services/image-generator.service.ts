@@ -22,43 +22,58 @@ export class ImageGeneratorService {
   }
 
   async generateNotificationImage(
-    billNumber: string,
-    amount: number,
-    commission: number,
-    customerName?: string,
-    serviceType?: string,
-  ): Promise<string> {
-    try {
-      const logoUrl = this.configService.get<string>('LOGO_URL', '');
-      const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
-      
-      const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
-      const filepath = path.join(this.uploadPath, filename);
-      
-      await nodeHtmlToImage({
-        output: filepath,
-        html: template,
-        quality: 100,
-        type: 'png',
-        transparent: false,
-        content: { amount, commission, customerName, serviceType },
-        puppeteerArgs: {
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-          defaultViewport: {
-            width: 1024,
-            height: 512,
-          },
+  billNumber: string,
+  amount: number,
+  commission: number,
+  customerName?: string,
+  serviceType?: string,
+): Promise<string> {
+  try {
+    const logoUrl = this.configService.get<string>('LOGO_URL', '');
+    this.logger.log(`Logo URL: ${logoUrl}`);
+    
+    const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
+    
+    const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
+    const filepath = path.join(this.uploadPath, filename);
+    
+    this.logger.log(`Generating image at: ${filepath}`);
+    
+    await nodeHtmlToImage({
+      output: filepath,
+      html: template,
+      quality: 100,
+      type: 'png',
+      transparent: false,
+      content: { amount, commission, customerName, serviceType },
+      puppeteerArgs: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: {
+          width: 1024,
+          height: 512,
         },
-      });
+      },
+    });
 
-      // Return public URL
-      const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
-      return `${baseUrl}/uploads/notifications/${filename}`;
-    } catch (error) {
-      this.logger.error('Failed to generate notification image:', error);
-      throw error;
+    // Check if file was created
+    if (fs.existsSync(filepath)) {
+      const stats = fs.statSync(filepath);
+      this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
+    } else {
+      this.logger.error(`Image file was not created: ${filepath}`);
     }
+
+    // Return public URL
+    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
+    this.logger.log(`Image URL: ${imageUrl}`);
+    
+    return imageUrl;
+  } catch (error) {
+    this.logger.error('Failed to generate notification image:', error);
+    throw error;
   }
+}
 
   private getNotificationTemplate(
     amount: number,
