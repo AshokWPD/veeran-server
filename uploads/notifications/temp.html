@@ -1,192 +1,4 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-var ImageGeneratorService_1;
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ImageGeneratorService = void 0;
-const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
-const node_html_to_image_1 = __importDefault(require("node-html-to-image"));
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const crypto = __importStar(require("crypto"));
-const os = __importStar(require("os"));
-let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorService {
-    configService;
-    logger = new common_1.Logger(ImageGeneratorService_1.name);
-    uploadPath;
-    platform;
-    constructor(configService) {
-        this.configService = configService;
-        this.uploadPath = path.join(process.cwd(), 'uploads', 'notifications');
-        this.platform = os.platform();
-        this.ensureDirectoryExists();
-    }
-    ensureDirectoryExists() {
-        if (!fs.existsSync(this.uploadPath)) {
-            fs.mkdirSync(this.uploadPath, { recursive: true });
-        }
-    }
-    getPuppeteerConfig() {
-        const args = ['--no-sandbox', '--disable-setuid-sandbox'];
-        if (this.platform === 'linux') {
-            args.push('--disable-dev-shm-usage');
-            args.push('--disable-gpu');
-        }
-        let executablePath;
-        if (this.platform === 'win32') {
-            const windowsPaths = [
-                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-            ];
-            for (const possiblePath of windowsPaths) {
-                if (fs.existsSync(possiblePath)) {
-                    executablePath = possiblePath;
-                    break;
-                }
-            }
-        }
-        else if (this.platform === 'linux') {
-            const linuxPaths = [
-                '/usr/bin/chromium-browser',
-                '/usr/bin/chromium',
-                '/usr/bin/google-chrome-stable',
-                '/usr/bin/google-chrome',
-            ];
-            for (const possiblePath of linuxPaths) {
-                if (fs.existsSync(possiblePath)) {
-                    executablePath = possiblePath;
-                    break;
-                }
-            }
-        }
-        return {
-            args,
-            defaultViewport: {
-                width: 1024,
-                height: 512,
-            },
-            executablePath,
-            headless: true,
-        };
-    }
-    async generateNotificationImage(billNumber, amount, commission, customerName, serviceType) {
-        try {
-            const logoUrl = this.configService.get('LOGO_URL', '');
-            this.logger.log(`Logo URL: ${logoUrl}`);
-            this.logger.log(`Platform: ${this.platform}`);
-            const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
-            const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
-            const filepath = path.join(this.uploadPath, filename);
-            this.logger.log(`Generating image at: ${filepath}`);
-            if (this.platform === 'win32') {
-                await this.generateImageForWindows(template, filepath);
-            }
-            else {
-                await this.generateImageForLinux(template, filepath);
-            }
-            if (fs.existsSync(filepath)) {
-                const stats = fs.statSync(filepath);
-                this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
-            }
-            else {
-                this.logger.error(`Image file was not created: ${filepath}`);
-                throw new Error('Failed to create image file');
-            }
-            const baseUrl = this.configService.get('APP_URL', 'http://localhost:3000');
-            const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
-            this.logger.log(`Image URL: ${imageUrl}`);
-            return imageUrl;
-        }
-        catch (error) {
-            this.logger.error('Failed to generate notification image:', error);
-            throw error;
-        }
-    }
-    async generateImageForWindows(html, outputPath) {
-        try {
-            await (0, node_html_to_image_1.default)({
-                output: outputPath,
-                html: html,
-                quality: 100,
-                type: 'png',
-                transparent: false,
-                puppeteerArgs: {
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-                    defaultViewport: {
-                        width: 1024,
-                        height: 512,
-                    },
-                },
-            });
-        }
-        catch (error) {
-            this.logger.error('Windows image generation failed:', error);
-            throw error;
-        }
-    }
-    async generateImageForLinux(html, outputPath) {
-        try {
-            const puppeteerArgs = this.getPuppeteerConfig();
-            await (0, node_html_to_image_1.default)({
-                output: outputPath,
-                html: html,
-                quality: 100,
-                type: 'png',
-                transparent: false,
-                puppeteerArgs: puppeteerArgs,
-            });
-        }
-        catch (error) {
-            this.logger.error('Linux image generation failed:', error);
-            throw error;
-        }
-    }
-    getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl) {
-        return `
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -500,7 +312,7 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
         <!-- Left Side with Logo and Title -->
         <div class="left-side">
             <div class="logo-container">
-                ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo">` : '<span style="font-size: 50px; color: white;">💰</span>'}
+                <img src="http://localhost:3000/uploads/icon.png" class="logo-img" alt="Logo">
             </div>
             <div class="tamil-title">பில் உருவாக்கப்பட்டது!</div>
             <div class="english-title">New Payment Received</div>
@@ -520,7 +332,7 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
                         Total Amount
                     </div>
                     <div class="card-value total">
-                        <span class="currency">₹</span>${amount.toLocaleString('en-IN')}
+                        <span class="currency">₹</span>15
                     </div>
                 </div>
                 
@@ -530,7 +342,7 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
                         Your Commission
                     </div>
                     <div class="card-value commission glow">
-                        <span class="currency">₹</span>${commission.toLocaleString('en-IN')}
+                        <span class="currency">₹</span>150
                     </div>
                 </div>
             </div>
@@ -542,18 +354,10 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
             
             <div class="footer">
                 <div class="customer-info">
-                    ${customerName ? `Customer: <span class="customer-name">${customerName}</span>` : 'Payment Received'}
+                    Payment Received
                 </div>
                 <div class="date-time">
-                    <div class="time">${new Date().toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        })} ${new Date().toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        })}</div>
+                    <div class="time">03 Jan 2026 02:38 pm</div>
                     Keep up the great work!
                 </div>
             </div>
@@ -571,30 +375,4 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
     </svg>
 </body>
 </html>
-    `;
-    }
-    async cleanupOldImages(maxAgeHours = 24) {
-        try {
-            const files = fs.readdirSync(this.uploadPath);
-            const now = Date.now();
-            const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
-            for (const file of files) {
-                const filepath = path.join(this.uploadPath, file);
-                const stats = fs.statSync(filepath);
-                if (now - stats.mtimeMs > maxAgeMs) {
-                    fs.unlinkSync(filepath);
-                    this.logger.log(`Cleaned up old image: ${file}`);
-                }
-            }
-        }
-        catch (error) {
-            this.logger.error('Failed to cleanup old images:', error);
-        }
-    }
-};
-exports.ImageGeneratorService = ImageGeneratorService;
-exports.ImageGeneratorService = ImageGeneratorService = ImageGeneratorService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
-], ImageGeneratorService);
-//# sourceMappingURL=image-generator.service.js.map
+    
