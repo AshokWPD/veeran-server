@@ -1,11 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import nodeHtmlToImage from 'node-html-to-image';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-
-// Import html-to-image properly
-const htmlToImage = require('html-to-image');
 
 @Injectable()
 export class ImageGeneratorService {
@@ -24,142 +22,56 @@ export class ImageGeneratorService {
   }
 
   async generateNotificationImage(
-    billNumber: string,
-    amount: number,
-    commission: number,
-    customerName?: string,
-    serviceType?: string,
-  ): Promise<string> {
-    try {
-      const logoUrl = this.configService.get<string>('LOGO_URL', '');
-      this.logger.log(`Logo URL: ${logoUrl}`);
-      
-      const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
-      
-      const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
-      const filepath = path.join(this.uploadPath, filename);
-      
-      this.logger.log(`Generating image at: ${filepath}`);
-      
-      // Generate image using html-to-image
-      await this.generateImageFromHtml(template, filepath);
-
-      // Check if file was created
-      if (fs.existsSync(filepath)) {
-        const stats = fs.statSync(filepath);
-        this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
-      } else {
-        this.logger.error(`Image file was not created: ${filepath}`);
-      }
-
-      // Return public URL
-      const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
-      const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
-      this.logger.log(`Image URL: ${imageUrl}`);
-      
-      return imageUrl;
-    } catch (error) {
-      this.logger.error('Failed to generate notification image:', error);
-      throw error;
-    }
-  }
-
-private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
+  billNumber: string,
+  amount: number,
+  commission: number,
+  customerName?: string,
+  serviceType?: string,
+): Promise<string> {
   try {
-    const nodeHtmlToImage = require('node-html-to-image');
+    const logoUrl = this.configService.get<string>('LOGO_URL', '');
+    this.logger.log(`Logo URL: ${logoUrl}`);
     
-    // Try different Chrome paths
-    const chromePaths = [
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
-      '/snap/chromium/current/chromium',
-      '/snap/chromium/3338/chromium',
-      '/snap/bin/chromium'
-    ];
+    const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
     
-    let executablePath: string | undefined;
-    for (const path of chromePaths) {
-      if (fs.existsSync(path)) {
-        executablePath = path;
-        this.logger.log(`Found Chrome at: ${executablePath}`);
-        break;
-      }
-    }
+    const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
+    const filepath = path.join(this.uploadPath, filename);
     
-    if (!executablePath) {
-      this.logger.warn('Chrome not found, using fallback image');
-      await this.createFallbackImage(outputPath);
-      return;
-    }
+    this.logger.log(`Generating image at: ${filepath}`);
     
     await nodeHtmlToImage({
-      output: outputPath,
-      html: html,
+      output: filepath,
+      html: template,
       quality: 100,
       type: 'png',
       transparent: false,
+      content: { amount, commission, customerName, serviceType },
       puppeteerArgs: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
         defaultViewport: {
           width: 1024,
           height: 512,
         },
-        executablePath: executablePath,
-        headless: 'new',
       },
     });
-    
-  } catch (error) {
-    this.logger.error('Error generating image with node-html-to-image:', error);
-    // Fallback to simple image
-    await this.createFallbackImage(outputPath);
-  }
-}
 
-private async createFallbackImage(outputPath: string): Promise<void> {
-  try {
-    // Create a simple text-based fallback image
-    const simpleHtml = `
-      <div style="
-        width: 1024px; 
-        height: 512px; 
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: white;
-        font-family: Arial;
-        padding: 40px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-      ">
-        <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px;">💰</div>
-        <h1 style="font-size: 36px; margin-bottom: 20px;">Payment Received</h1>
-        <p style="font-size: 24px; opacity: 0.8;">Notification details available in your account</p>
-        <p style="margin-top: 40px; font-size: 18px; opacity: 0.6;">Image generation temporarily unavailable</p>
-      </div>
-    `;
-    
-    // Try to save as HTML for debugging
-    const htmlPath = outputPath.replace('.png', '.html');
-    fs.writeFileSync(htmlPath, simpleHtml);
-    this.logger.log(`Created fallback HTML at: ${htmlPath}`);
-    
-    // Copy a placeholder if exists, otherwise create empty file
-    const placeholderPath = path.join(process.cwd(), 'uploads', 'placeholder.png');
-    if (fs.existsSync(placeholderPath)) {
-      fs.copyFileSync(placeholderPath, outputPath);
+    // Check if file was created
+    if (fs.existsSync(filepath)) {
+      const stats = fs.statSync(filepath);
+      this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
     } else {
-      // Create empty file or minimal PNG
-      fs.writeFileSync(outputPath, '');
+      this.logger.error(`Image file was not created: ${filepath}`);
     }
+
+    // Return public URL
+    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
+    this.logger.log(`Image URL: ${imageUrl}`);
     
+    return imageUrl;
   } catch (error) {
-    this.logger.error('Error creating fallback image:', error);
-    // Just create empty file
-    fs.writeFileSync(outputPath, '');
+    this.logger.error('Failed to generate notification image:', error);
+    throw error;
   }
 }
 
