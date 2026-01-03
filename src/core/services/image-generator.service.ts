@@ -66,57 +66,53 @@ export class ImageGeneratorService {
 
 private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
   try {
-    // First, set up JSDOM with canvas support
-    const { JSDOM } = await import('jsdom');
+    // Use node-html-to-image (if installed)
+    const nodeHtmlToImage = require('node-html-to-image');
     
-    // Create DOM with canvas support
-    const dom = new JSDOM(html, {
-      resources: 'usable',
-      runScripts: 'dangerously',
-      pretendToBeVisual: true,
-      url: 'http://localhost'
+    await nodeHtmlToImage({
+      output: outputPath,
+      html: html,
+      quality: 100,
+      type: 'png',
+      transparent: false,
+      puppeteerArgs: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: {
+          width: 1024,
+          height: 512,
+        },
+        // Try to use system Chrome if available
+        executablePath: process.env.CHROME_PATH || undefined,
+      },
     });
-    
-    // Mock Canvas if not available
-    const { window } = dom;
-    
-    // Add missing browser globals
-    if (typeof (global as any).window === 'undefined') {
-      (global as any).window = window;
-      (global as any).document = window.document;
-      (global as any).HTMLElement = window.HTMLElement;
-      (global as any).HTMLCanvasElement = window.HTMLCanvasElement;
-      (global as any).Image = window.Image;
-    }
-    
-    // Wait for resources to load
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Get the body element
-    const body = dom.window.document.body;
-    
-    // Now import html-to-image AFTER setting up globals
-    const { toPng } = await import('html-to-image');
-    
-    // Generate image
-    const dataUrl = await toPng(body, {
-      width: 1024,
-      height: 512,
-      backgroundColor: '#0f172a',
-      quality: 1.0,
-      skipAutoScale: true,
-      pixelRatio: 2,
-      cacheBust: true,
-    });
-    
-    // Save to file
-    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    fs.writeFileSync(outputPath, buffer);
     
   } catch (error) {
-    this.logger.error('Error generating image:', error);
-    throw error;
+    this.logger.error('Error generating image with node-html-to-image:', error);
+    // Fallback to simple text image
+    await this.createFallbackImage(outputPath);
+  }
+}
+
+private async createFallbackImage(outputPath: string): Promise<void> {
+  // Create a simple fallback image
+  const simpleHtml = `
+    <html>
+      <body style="margin:0; padding:20px; background:#0f172a; color:white; font-family:Arial; width:1024px; height:512px;">
+        <h1>Payment Notification</h1>
+        <p>Image generation failed due to server constraints.</p>
+        <p>Please check the bill details in your account.</p>
+      </body>
+    </html>
+  `;
+  
+  // Save as HTML file instead of image
+  const htmlPath = outputPath.replace('.png', '.html');
+  fs.writeFileSync(htmlPath, simpleHtml);
+  
+  // Copy a placeholder image
+  const placeholderPath = path.join(__dirname, '..', '..', 'public', 'placeholder.png');
+  if (fs.existsSync(placeholderPath)) {
+    fs.copyFileSync(placeholderPath, outputPath);
   }
 }
 
