@@ -91,6 +91,8 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
         }
         else if (this.platform === 'linux') {
             const linuxPaths = [
+                '/snap/chromium/current/chromium',
+                '/snap/chromium/3338/chromium',
                 '/usr/bin/chromium-browser',
                 '/usr/bin/chromium',
                 '/usr/bin/google-chrome-stable',
@@ -99,6 +101,7 @@ let ImageGeneratorService = ImageGeneratorService_1 = class ImageGeneratorServic
             for (const possiblePath of linuxPaths) {
                 if (fs.existsSync(possiblePath)) {
                     executablePath = possiblePath;
+                    this.logger.log(`Using browser at: ${executablePath}`);
                     break;
                 }
             }

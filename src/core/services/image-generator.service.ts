@@ -49,22 +49,26 @@ export class ImageGeneratorService {
           break;
         }
       }
-    } else if (this.platform === 'linux') {
-      // Linux paths (AWS)
-      const linuxPaths = [
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium',
-        '/usr/bin/google-chrome-stable',
-        '/usr/bin/google-chrome',
-      ];
-      
-      for (const possiblePath of linuxPaths) {
-        if (fs.existsSync(possiblePath)) {
-          executablePath = possiblePath;
-          break;
-        }
-      }
+    } // In your getPuppeteerConfig() method, add snap paths:
+ else if (this.platform === 'linux') {
+  // Linux paths (AWS)
+  const linuxPaths = [
+    '/snap/chromium/current/chromium',
+    '/snap/chromium/3338/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+  ];
+  
+  for (const possiblePath of linuxPaths) {
+    if (fs.existsSync(possiblePath)) {
+      executablePath = possiblePath;
+      this.logger.log(`Using browser at: ${executablePath}`);
+      break;
     }
+  }
+}
     
     return {
       args,
