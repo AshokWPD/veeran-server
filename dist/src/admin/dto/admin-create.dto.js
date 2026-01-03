@@ -16,22 +16,32 @@ class AdminCreateDto {
     email;
     password;
     name;
+    playerId;
 }
 exports.AdminCreateDto = AdminCreateDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'admin@shop.com' }),
+    (0, swagger_1.ApiProperty)({ example: 'admin@example.com' }),
     (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], AdminCreateDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'StrongPassword123' }),
+    (0, swagger_1.ApiProperty)({ example: 'password123' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MinLength)(6),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], AdminCreateDto.prototype, "password", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 'Admin User' }),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], AdminCreateDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'player_id_from_one_signal' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AdminCreateDto.prototype, "playerId", void 0);
 //# sourceMappingURL=admin-create.dto.js.map

@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import * as express from 'express';
 
 dotenv.config();
 
@@ -15,7 +17,12 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-// Replace helmet configuration with:
+
+
+    // Expose uploads folder at /uploads (static)
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+
+  
 app.use(
   helmet({
     // Disable problematic headers for Swagger

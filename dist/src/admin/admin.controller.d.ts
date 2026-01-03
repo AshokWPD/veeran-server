@@ -12,6 +12,7 @@ export declare class AdminController {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -22,11 +23,13 @@ export declare class AdminController {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     login(dto: AdminLoginDto): Promise<{
         access_token: string;
+        playerId: string | null;
     }>;
     getMe(req: any): Promise<{
         name: string;
@@ -35,6 +38,7 @@ export declare class AdminController {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -46,5 +50,16 @@ export declare class AdminController {
         newPassword: string;
     }): Promise<{
         message: string;
+    }>;
+    updatePlayerId(req: any, playerId: string): Promise<{
+        name: string;
+        id: string;
+        email: string;
+        role: string;
+        isActive: boolean;
+        isSuperAdmin: boolean;
+        playerId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
 }

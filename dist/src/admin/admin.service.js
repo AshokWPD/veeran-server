@@ -56,13 +56,18 @@ let AdminService = class AdminService {
         this.jwtService = jwtService;
     }
     async createAdmin(data) {
-        const { email, password, name } = data;
+        const { email, password, name, playerId } = data;
         const exists = await this.prisma.admin.findUnique({ where: { email } });
         if (exists)
             throw new common_1.ConflictException('Admin email already exists');
         const hash = await bcrypt.hash(password, 10);
         const admin = await this.prisma.admin.create({
-            data: { email, name, password: hash },
+            data: {
+                email,
+                name,
+                password: hash,
+                playerId
+            },
         });
         const { password: _, resetToken, resetTokenExpiry, ...rest } = admin;
         return rest;
@@ -76,13 +81,27 @@ let AdminService = class AdminService {
         return rest;
     }
     async login(loginDto) {
-        const { email, password } = loginDto;
+        const { email, password, playerId } = loginDto;
         const admin = await this.prisma.admin.findUnique({ where: { email } });
         if (!admin || !(await bcrypt.compare(password, admin.password))) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const payload = { sub: admin.id, email: admin.email, role: 'admin' };
-        return { access_token: this.jwtService.sign(payload) };
+        if (playerId) {
+            await this.prisma.admin.update({
+                where: { id: admin.id },
+                data: { playerId },
+            });
+        }
+        const payload = {
+            sub: admin.id,
+            email: admin.email,
+            role: 'admin',
+            playerId: admin.playerId
+        };
+        return {
+            access_token: this.jwtService.sign(payload),
+            playerId: admin.playerId
+        };
     }
     async getMe(adminId) {
         const admin = await this.prisma.admin.findUnique({
@@ -117,6 +136,14 @@ let AdminService = class AdminService {
             data: { password: hash, resetToken: null, resetTokenExpiry: null },
         });
         return { message: 'Password reset successful' };
+    }
+    async updatePlayerId(adminId, playerId) {
+        const admin = await this.prisma.admin.update({
+            where: { id: adminId },
+            data: { playerId },
+        });
+        const { password, resetToken, resetTokenExpiry, ...rest } = admin;
+        return rest;
     }
 };
 exports.AdminService = AdminService;

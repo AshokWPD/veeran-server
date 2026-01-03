@@ -20,6 +20,7 @@ model Admin {
   role             String    @default("admin")
   isActive         Boolean   @default(true)
   isSuperAdmin     Boolean   @default(false)
+  playerId         String?   // Add this line
   resetToken       String?
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())

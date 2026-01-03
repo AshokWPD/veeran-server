@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import { BillService } from './bill.service';
 import {
@@ -39,8 +40,13 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 
+import { BillNotificationInterceptor } from './interceptors/bill-notification.interceptor';
+
+
+
 @ApiTags('bills')
 @Controller('bills')
+@UseInterceptors(BillNotificationInterceptor)
 export class BillController {
   constructor(private readonly billService: BillService) {}
 

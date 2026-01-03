@@ -6,6 +6,7 @@ import {
   Get,
   UseGuards,
   Req,
+  Patch,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminCreateDto } from './dto/admin-create.dto';
@@ -61,5 +62,15 @@ export class AdminController {
   @ApiOperation({ summary: 'Admin reset password using token' })
   resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.adminService.resetPassword(body.token, body.newPassword);
+  }
+
+  // Optional: Add a dedicated endpoint for updating playerId
+  @Patch('update-player-id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update OneSignal player ID' })
+  @ApiBody({ schema: { properties: { playerId: { type: 'string' } } } })
+  updatePlayerId(@Req() req, @Body('playerId') playerId: string) {
+    return this.adminService.updatePlayerId(req.user.sub, playerId);
   }
 }

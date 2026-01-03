@@ -10,14 +10,28 @@ exports.CoreModule = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("./services/prisma.service");
 const email_service_1 = require("./services/email.service");
+const onesignal_service_1 = require("./services/onesignal.service");
+const image_generator_service_1 = require("./services/image-generator.service");
+const config_1 = require("@nestjs/config");
 let CoreModule = class CoreModule {
 };
 exports.CoreModule = CoreModule;
 exports.CoreModule = CoreModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        providers: [prisma_service_1.PrismaService, email_service_1.EmailService],
-        exports: [prisma_service_1.PrismaService, email_service_1.EmailService],
+        imports: [config_1.ConfigModule],
+        providers: [
+            prisma_service_1.PrismaService,
+            email_service_1.EmailService,
+            onesignal_service_1.OneSignalService,
+            image_generator_service_1.ImageGeneratorService,
+        ],
+        exports: [
+            prisma_service_1.PrismaService,
+            email_service_1.EmailService,
+            onesignal_service_1.OneSignalService,
+            image_generator_service_1.ImageGeneratorService,
+        ],
     })
 ], CoreModule);
 //# sourceMappingURL=core.module.js.map

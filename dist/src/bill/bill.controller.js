@@ -19,6 +19,7 @@ const create_bill_dto_1 = require("./dto/create-bill.dto");
 const quick_service_dto_1 = require("./dto/quick-service.dto");
 const money_exchange_dto_1 = require("./dto/money-exchange.dto");
 const swagger_1 = require("@nestjs/swagger");
+const bill_notification_interceptor_1 = require("./interceptors/bill-notification.interceptor");
 let BillController = class BillController {
     billService;
     constructor(billService) {
@@ -171,6 +172,7 @@ __decorate([
 exports.BillController = BillController = __decorate([
     (0, swagger_1.ApiTags)('bills'),
     (0, common_1.Controller)('bills'),
+    (0, common_1.UseInterceptors)(bill_notification_interceptor_1.BillNotificationInterceptor),
     __metadata("design:paramtypes", [bill_service_1.BillService])
 ], BillController);
 //# sourceMappingURL=bill.controller.js.map

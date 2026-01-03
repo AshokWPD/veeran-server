@@ -43,6 +43,9 @@ let AdminController = class AdminController {
     resetPassword(body) {
         return this.adminService.resetPassword(body.token, body.newPassword);
     }
+    updatePlayerId(req, playerId) {
+        return this.adminService.updatePlayerId(req.user.sub, playerId);
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -102,6 +105,18 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "resetPassword", null);
+__decorate([
+    (0, common_1.Patch)('update-player-id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Update OneSignal player ID' }),
+    (0, swagger_1.ApiBody)({ schema: { properties: { playerId: { type: 'string' } } } }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)('playerId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], AdminController.prototype, "updatePlayerId", null);
 exports.AdminController = AdminController = __decorate([
     (0, swagger_1.ApiTags)('Admin'),
     (0, common_1.Controller)('admin'),

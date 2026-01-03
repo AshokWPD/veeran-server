@@ -19,8 +19,10 @@ const account_module_1 = require("./account/account.module");
 const transaction_module_1 = require("./transaction/transaction.module");
 const report_module_1 = require("./report/report.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
+const notification_module_1 = require("./notification/notification.module");
 const money_exchange_module_1 = require("./money-exchange/money-exchange.module");
 const response_logger_middleware_1 = require("./common/middlewares/response-logger.middleware");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let AppModule = class AppModule {
     configure(consumer) {
         consumer.apply(response_logger_middleware_1.ResponseLoggerMiddleware).forRoutes('*');
@@ -30,6 +32,15 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            event_emitter_1.EventEmitterModule.forRoot({
+                wildcard: false,
+                delimiter: '.',
+                newListener: false,
+                removeListener: false,
+                maxListeners: 10,
+                verboseMemoryLeak: false,
+                ignoreErrors: false,
+            }),
             core_module_1.CoreModule,
             admin_module_1.AdminModule,
             service_module_1.ServiceModule,
@@ -40,6 +51,7 @@ exports.AppModule = AppModule = __decorate([
             report_module_1.ReportModule,
             dashboard_module_1.DashboardModule,
             money_exchange_module_1.MoneyExchangeModule,
+            notification_module_1.NotificationModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

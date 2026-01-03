@@ -14,6 +14,7 @@ export declare class AdminService {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -24,11 +25,13 @@ export declare class AdminService {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     login(loginDto: AdminLoginDto): Promise<{
         access_token: string;
+        playerId: string | null;
     }>;
     getMe(adminId: string): Promise<{
         name: string;
@@ -37,6 +40,7 @@ export declare class AdminService {
         role: string;
         isActive: boolean;
         isSuperAdmin: boolean;
+        playerId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -45,5 +49,16 @@ export declare class AdminService {
     }>;
     resetPassword(token: string, newPassword: string): Promise<{
         message: string;
+    }>;
+    updatePlayerId(adminId: string, playerId: string): Promise<{
+        name: string;
+        id: string;
+        email: string;
+        role: string;
+        isActive: boolean;
+        isSuperAdmin: boolean;
+        playerId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
 }

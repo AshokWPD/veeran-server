@@ -42,6 +42,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const swagger_1 = require("@nestjs/swagger");
 const dotenv = __importStar(require("dotenv"));
 const common_1 = require("@nestjs/common");
+const path_1 = require("path");
+const express = __importStar(require("express"));
 dotenv.config();
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
@@ -49,6 +51,7 @@ async function bootstrap() {
         whitelist: true,
         forbidNonWhitelisted: true,
     }));
+    app.use('/uploads', express.static((0, path_1.join)(process.cwd(), 'uploads')));
     app.use((0, helmet_1.default)({
         crossOriginOpenerPolicy: false,
         crossOriginResourcePolicy: false,

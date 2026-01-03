@@ -14,6 +14,7 @@ const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 class AdminUpdateDto {
     name;
+    playerId;
 }
 exports.AdminUpdateDto = AdminUpdateDto;
 __decorate([
@@ -22,4 +23,10 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], AdminUpdateDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'updated_player_id_from_one_signal' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AdminUpdateDto.prototype, "playerId", void 0);
 //# sourceMappingURL=admin-update.dto.js.map

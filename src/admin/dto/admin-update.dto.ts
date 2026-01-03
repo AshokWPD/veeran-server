@@ -6,4 +6,9 @@ export class AdminUpdateDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional({ example: 'updated_player_id_from_one_signal' })
+  @IsOptional()
+  @IsString()
+  playerId?: string;
 }
