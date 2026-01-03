@@ -64,55 +64,22 @@ export class ImageGeneratorService {
     }
   }
 
-  private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
-    try {
-      // Create a temporary HTML file
-      const tempHtmlPath = path.join(this.uploadPath, 'temp.html');
-      fs.writeFileSync(tempHtmlPath, html);
-      
-      // Create a virtual DOM using jsdom
-      const { JSDOM } = await import('jsdom');
-      const dom = new JSDOM(html, {
-        resources: 'usable',
-        runScripts: 'dangerously'
-      });
-      
-      const document = dom.window.document;
-      
-      // Wait for resources to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get the body element
-      const body = document.body;
-      
-      // Set canvas dimensions
-      body.style.width = '1024px';
-      body.style.height = '512px';
-      
-      // Generate PNG using html-to-image
-      const dataUrl = await htmlToImage.toPng(body, {
-        width: 1024,
-        height: 512,
-        backgroundColor: '#0f172a',
-        quality: 1.0,
-        pixelRatio: 2,
-        skipAutoScale: true,
-      });
-      
-      // Save to file
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-      fs.writeFileSync(outputPath, buffer);
-      
-      // Clean up temp file
-      if (fs.existsSync(tempHtmlPath)) {
-        fs.unlinkSync(tempHtmlPath);
-      }
-    } catch (error) {
-      this.logger.error('Error generating image:', error);
-      throw error;
-    }
+ private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
+  try {
+    const nodeHtmlToImage = require('node-html-to-image-lite');
+    
+    await nodeHtmlToImage({
+      output: outputPath,
+      html: html,
+      quality: 100,
+      type: 'png',
+      transparent: false,
+    });
+  } catch (error) {
+    this.logger.error('Error generating image:', error);
+    throw error;
   }
+}
 
   private getNotificationTemplate(
     amount: number,
