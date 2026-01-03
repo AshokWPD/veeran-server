@@ -64,17 +64,31 @@ export class ImageGeneratorService {
     }
   }
 
- private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
+private async generateImageFromHtml(html: string, outputPath: string): Promise<void> {
   try {
-    const nodeHtmlToImage = require('node-html-to-image-lite');
+    // Use html-to-image with jsdom
+    const { toPng } = await import('html-to-image');
+    const { JSDOM } = await import('jsdom');
     
-    await nodeHtmlToImage({
-      output: outputPath,
-      html: html,
-      quality: 100,
-      type: 'png',
-      transparent: false,
+    // Create DOM
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+    
+    // Get body element
+    const body = document.body;
+    
+    // Generate image
+    const dataUrl = await toPng(body, {
+      width: 1024,
+      height: 512,
+      backgroundColor: '#0f172a',
+      quality: 1.0,
     });
+    
+    // Save to file
+    const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(outputPath, buffer);
   } catch (error) {
     this.logger.error('Error generating image:', error);
     throw error;
