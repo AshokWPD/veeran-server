@@ -18,3 +18,5 @@ nest-cli.json
 tsconfig.build.json
 
 tsconfig.json
+
+package-lock.json
