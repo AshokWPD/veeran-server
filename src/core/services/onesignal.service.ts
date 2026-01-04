@@ -52,7 +52,7 @@ export class OneSignalService {
         android_accent_color: 'FF5722',
         // IMPORTANT: Use big_picture for Android notifications
         big_picture: imageUrl,
-        global_image: imageUrl,
+        // global_image: imageUrl,
         // For Chrome/Web
         chrome_web_image: imageUrl,
         // For all platforms
