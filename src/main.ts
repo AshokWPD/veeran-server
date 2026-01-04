@@ -21,6 +21,7 @@ async function bootstrap() {
 
     // Expose uploads folder at /uploads (static)
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  app.use('/assets', express.static(join(process.cwd(), 'assets')));
 
   
 app.use(
