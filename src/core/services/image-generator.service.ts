@@ -1,13 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import nodeHtmlToImage from 'node-html-to-image';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
 @Injectable()
-export class ImageGeneratorService {
-  private readonly logger = new Logger(ImageGeneratorService.name);
+export class ImageGeneratorLinuxService {
+  private readonly logger = new Logger(ImageGeneratorLinuxService.name);
   private readonly uploadPath: string;
 
   constructor(private configService: ConfigService) {
@@ -22,58 +21,63 @@ export class ImageGeneratorService {
   }
 
   async generateNotificationImage(
-  billNumber: string,
-  amount: number,
-  commission: number,
-  customerName?: string,
-  serviceType?: string,
-): Promise<string> {
-  try {
-    const logoUrl = this.configService.get<string>('LOGO_URL', '');
-    this.logger.log(`Logo URL: ${logoUrl}`);
-    
-    const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
-    
-    const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
-    const filepath = path.join(this.uploadPath, filename);
-    
-    this.logger.log(`Generating image at: ${filepath}`);
-    
-    await nodeHtmlToImage({
-      output: filepath,
-      html: template,
-      quality: 100,
-      type: 'png',
-      transparent: false,
-      content: { amount, commission, customerName, serviceType },
-      puppeteerArgs: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: {
-          width: 1024,
-          height: 512,
-        },
-      },
-    });
+    billNumber: string,
+    amount: number,
+    commission: number,
+    customerName?: string,
+    serviceType?: string,
+  ): Promise<string> {
+    try {
+      const logoUrl = this.configService.get<string>('LOGO_URL', '');
+      const template = this.getNotificationTemplate(amount, commission, customerName, serviceType, logoUrl);
+      
+      const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
+      const filepath = path.join(this.uploadPath, filename);
+      
+      // Use alternative method that doesn't need puppeteer
+      await this.generateWithAlternativeMethod(template, filepath);
 
-    // Check if file was created
-    if (fs.existsSync(filepath)) {
-      const stats = fs.statSync(filepath);
-      this.logger.log(`Image created successfully. Size: ${stats.size} bytes`);
-    } else {
-      this.logger.error(`Image file was not created: ${filepath}`);
+      // Return public URL
+      const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+      return `${baseUrl}/uploads/notifications/${filename}`;
+      
+    } catch (error) {
+      this.logger.error('Failed to generate image:', error);
+      return this.createFallbackUrl(billNumber, amount, commission);
     }
-
-    // Return public URL
-    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
-    const imageUrl = `${baseUrl}/uploads/notifications/${filename}`;
-    this.logger.log(`Image URL: ${imageUrl}`);
-    
-    return imageUrl;
-  } catch (error) {
-    this.logger.error('Failed to generate notification image:', error);
-    throw error;
   }
-}
+
+  private async generateWithAlternativeMethod(html: string, outputPath: string): Promise<void> {
+    // Method 1: Use headless Chrome directly
+    await this.useHeadlessChromeDirectly(html, outputPath);
+  }
+
+  private async useHeadlessChromeDirectly(html: string, outputPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const { exec } = require('child_process');
+      
+      // Create temp HTML file
+      const tempHtml = path.join('/tmp', `temp_${Date.now()}.html`);
+      fs.writeFileSync(tempHtml, html);
+      
+      const command = `chromium-browser --headless --disable-gpu --screenshot="${outputPath}" --window-size=1024,512 "${tempHtml}"`;
+      
+      exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
+        // Cleanup temp file
+        if (fs.existsSync(tempHtml)) {
+          fs.unlinkSync(tempHtml);
+        }
+        
+        if (error) {
+          this.logger.error(`Chrome error: ${stderr}`);
+          reject(error);
+        } else {
+          this.logger.log('Image generated with headless Chrome');
+          resolve();
+        }
+      });
+    });
+  }
 
   private getNotificationTemplate(
     amount: number,
@@ -468,6 +472,12 @@ export class ImageGeneratorService {
 </body>
 </html>
     `;
+  }
+
+
+    private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
+    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    return `${baseUrl}/api/placeholder?bill=${billNumber}&amount=${amount}`;
   }
 
   async cleanupOldImages(maxAgeHours = 24): Promise<void> {
