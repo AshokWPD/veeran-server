@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import * as puppeteer from 'puppeteer';
 
 @Injectable()
 export class ImageGeneratorService {
@@ -34,8 +35,8 @@ export class ImageGeneratorService {
       const filename = `bill_${billNumber}_${crypto.randomBytes(8).toString('hex')}.png`;
       const filepath = path.join(this.uploadPath, filename);
       
-      // Use alternative method that doesn't need puppeteer
-      await this.generateWithAlternativeMethod(template, filepath);
+      // Use puppeteer for reliable HTML to image conversion
+      await this.generateWithPuppeteer(template, filepath);
 
       // Return public URL
       const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
@@ -47,37 +48,61 @@ export class ImageGeneratorService {
     }
   }
 
-  private async generateWithAlternativeMethod(html: string, outputPath: string): Promise<void> {
-    // Method 1: Use headless Chrome directly
-    await this.useHeadlessChromeDirectly(html, outputPath);
-  }
-
-  private async useHeadlessChromeDirectly(html: string, outputPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const { exec } = require('child_process');
-      
-      // Create temp HTML file
-      const tempHtml = path.join('/tmp', `temp_${Date.now()}.html`);
-      fs.writeFileSync(tempHtml, html);
-      
-      const command = `chromium-browser --headless --disable-gpu --screenshot="${outputPath}" --window-size=1024,512 "${tempHtml}"`;
-      
-      exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
-        // Cleanup temp file
-        if (fs.existsSync(tempHtml)) {
-          fs.unlinkSync(tempHtml);
-        }
-        
-        if (error) {
-          this.logger.error(`Chrome error: ${stderr}`);
-          reject(error);
-        } else {
-          this.logger.log('Image generated with headless Chrome');
-          resolve();
+  private async generateWithPuppeteer(html: string, outputPath: string): Promise<void> {
+    let browser = null;
+    
+    try {
+      // Launch browser with optimized settings for server environment
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--single-process'
+        ],
+        defaultViewport: {
+          width: 1024,
+          height: 512,
         }
       });
-    });
+
+      const page = await browser.newPage();
+      
+      // Set HTML content
+      await page.setContent(html, {
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      });
+
+      // Wait for fonts and images to load
+      await page.evaluateHandle('document.fonts.ready');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Take screenshot
+      await page.screenshot({
+        path: outputPath,
+        type: 'png',
+        fullPage: false,
+        omitBackground: false,
+        captureBeyondViewport: false
+      });
+
+      this.logger.log(`Image generated successfully: ${outputPath}`);
+
+    } catch (error) {
+      this.logger.error('Puppeteer error:', error);
+      throw error;
+    } finally {
+      if (browser) {
+        await browser.close();
+      }
+    }
   }
+
 
   private getNotificationTemplate(
     amount: number,
@@ -499,6 +524,7 @@ export class ImageGeneratorService {
       this.logger.error('Failed to cleanup old images:', error);
     }
   }
+
 }
 
 
