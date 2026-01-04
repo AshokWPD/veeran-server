@@ -150,65 +150,7 @@ export class ImageGeneratorService {
     });
   }
 
- 
-
-  private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
-    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
-    return `${baseUrl}/api/placeholder?bill=${billNumber}&amount=${amount}`;
-  }
-
-  async cleanupOldImages(maxAgeHours = 24): Promise<void> {
-    try {
-      const files = fs.readdirSync(this.uploadPath);
-      const now = Date.now();
-      const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
-
-      for (const file of files) {
-        const filepath = path.join(this.uploadPath, file);
-        const stats = fs.statSync(filepath);
-        
-        if (now - stats.mtimeMs > maxAgeMs) {
-          fs.unlinkSync(filepath);
-          this.logger.log(`Cleaned up old image: ${file}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error('Failed to cleanup old images:', error);
-    }
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   // Keep your existing getNotificationTemplate() method
+  // Keep your existing getNotificationTemplate() method
   private getNotificationTemplate(
     amount: number,
     commission: number,
@@ -602,6 +544,31 @@ export class ImageGeneratorService {
 </body>
 </html>
     `;
+  }
+
+  private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
+    const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    return `${baseUrl}/api/placeholder?bill=${billNumber}&amount=${amount}`;
+  }
+
+  async cleanupOldImages(maxAgeHours = 24): Promise<void> {
+    try {
+      const files = fs.readdirSync(this.uploadPath);
+      const now = Date.now();
+      const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+
+      for (const file of files) {
+        const filepath = path.join(this.uploadPath, file);
+        const stats = fs.statSync(filepath);
+        
+        if (now - stats.mtimeMs > maxAgeMs) {
+          fs.unlinkSync(filepath);
+          this.logger.log(`Cleaned up old image: ${file}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to cleanup old images:', error);
+    }
   }
 }
 
