@@ -49,12 +49,12 @@ export class ImageGeneratorService {
   }
 
   private async generateWithPuppeteer(html: string, outputPath: string): Promise<void> {
-    let browser = null;
+    let browser: puppeteer.Browser | null = null;
     
     try {
       // Launch browser with optimized settings for server environment
       browser = await puppeteer.launch({
-        headless: 'new',
+        headless: true, // Changed from 'new' to true for compatibility
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -103,7 +103,54 @@ export class ImageGeneratorService {
     }
   }
 
+  // Alternative method using system Chrome as fallback
+  private async useHeadlessChromeDirectly(html: string, outputPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const { exec } = require('child_process');
+      
+      // Create temp HTML file
+      const tempHtml = path.join('/tmp', `temp_${Date.now()}.html`);
+      fs.writeFileSync(tempHtml, html);
+      
+      // Try different Chrome/Chromium commands
+      const commands = [
+        'google-chrome-stable --headless --disable-gpu --screenshot',
+        'google-chrome --headless --disable-gpu --screenshot',
+        'chromium-browser --headless --disable-gpu --screenshot',
+        'chromium --headless --disable-gpu --screenshot'
+      ];
+      
+      let commandIndex = 0;
+      const tryCommand = () => {
+        if (commandIndex >= commands.length) {
+          reject(new Error('No Chrome/Chromium binary found'));
+          return;
+        }
+        
+        const command = `${commands[commandIndex]}="${outputPath}" --window-size=1024,512 "${tempHtml}"`;
+        
+        exec(command, { timeout: 30000 }, (error: Error, stdout: string, stderr: string) => {
+          // Cleanup temp file
+          if (fs.existsSync(tempHtml)) {
+            fs.unlinkSync(tempHtml);
+          }
+          
+          if (error) {
+            this.logger.error(`Command ${commandIndex + 1} failed: ${stderr}`);
+            commandIndex++;
+            tryCommand();
+          } else {
+            this.logger.log(`Image generated with command ${commandIndex + 1}`);
+            resolve();
+          }
+        });
+      };
+      
+      tryCommand();
+    });
+  }
 
+  // Keep your existing getNotificationTemplate() method
   private getNotificationTemplate(
     amount: number,
     commission: number,
@@ -499,8 +546,7 @@ export class ImageGeneratorService {
     `;
   }
 
-
-    private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
+  private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
     const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
     return `${baseUrl}/api/placeholder?bill=${billNumber}&amount=${amount}`;
   }
@@ -524,7 +570,6 @@ export class ImageGeneratorService {
       this.logger.error('Failed to cleanup old images:', error);
     }
   }
-
 }
 
 
