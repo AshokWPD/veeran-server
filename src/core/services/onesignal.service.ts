@@ -35,40 +35,39 @@ export class OneSignalService {
       }
 
       this.logger.log(`Sending notification to ${playerIds.length} players`);
-      this.logger.log(`Image URL for notification: ${imageUrl}`);
+      
+      // Format image URL - add https:// if not present
+      let formattedImageUrl = this.formatImageUrl(imageUrl);
+      
+      if (formattedImageUrl) {
+        this.logger.log(`Formatted Image URL: ${formattedImageUrl}`);
+      }
 
-      // IMPORTANT: For OneSignal, you need to use specific fields for images
+      // Build payload
       const payload: any = {
         app_id: this.appId,
         include_player_ids: playerIds,
         headings: { en: title },
         contents: { en: message },
         data: data || {},
-        // For iOS
-        ios_attachments: imageUrl ? { id1: imageUrl } : undefined,
-        // For Android
-        large_icon: this.configService.get('LOGO_URL', ''),
-        android_led_color: 'FF5722FF',
+        large_icon: 'https://dev.goltens.in/uploads/icon.png',
         android_accent_color: 'FF5722',
-        // IMPORTANT: Use big_picture for Android notifications
-        big_picture: imageUrl,
-        global_image: imageUrl,
-        // For Chrome/Web
-        chrome_web_image: imageUrl,
-        // For all platforms
-        adm_big_picture: imageUrl, // For Amazon devices
-        chrome_big_picture: imageUrl, // For Chrome
+        android_led_color: 'FF5722FF',
+        android_sound: 'notification',
+        ios_sound: 'notification.wav',
       };
 
-      // If image is provided, add it to the notification
-      if (imageUrl) {
-        // OneSignal needs the image to be publicly accessible
-        payload.ios_attachments = { image: imageUrl };
-        payload.big_picture = imageUrl;
-        payload.chrome_web_image = imageUrl;
-        payload.firefox_icon = imageUrl;
-        payload.chrome_icon = imageUrl;
+      // Add image fields ONLY if formattedImageUrl is provided
+      if (formattedImageUrl) {
+        payload.large_picture = formattedImageUrl;  // Global image
+        payload.big_picture = formattedImageUrl;    // Android big picture
+        payload.chrome_web_image = formattedImageUrl; // Web
+        payload.chrome_big_picture = formattedImageUrl; // Chrome
+        payload.ios_attachments = { id1: formattedImageUrl }; // iOS
+        payload.mutable_content = 1; // Enable for iOS rich notifications
       }
+
+      this.logger.log('Sending OneSignal payload:', JSON.stringify(payload, null, 2));
 
       const response = await axios.post(
         `${this.baseUrl}/notifications`,
@@ -88,13 +87,60 @@ export class OneSignalService {
     } catch (error) {
       this.logger.error('Failed to send OneSignal notification:', error.response?.data || error.message);
       if (error.response) {
-        this.logger.error('OneSignal API Error Details:', error.response.data);
+        this.logger.error('OneSignal API Error Details:', JSON.stringify(error.response.data, null, 2));
       }
       throw error;
     }
   }
 
-  // For sending to all users (if needed)
+  // Helper method to format image URL
+  private formatImageUrl(imageUrl?: string): string | undefined {
+    if (!imageUrl) return undefined;
+    
+    // If already has http:// or https://, return as-is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    
+    // Add https:// to the beginning
+    // Remove any leading slashes to avoid double slashes
+    const cleanUrl = imageUrl.replace(/^\/+/, '');
+    return `https://${cleanUrl}`;
+  }
+
+  // Specific method for bill notifications
+  async sendBillNotification(
+    playerIds: string[],
+    billId: string,
+    billNumber: string,
+    amount: number,
+    commission: number,
+    imageUrl?: string, // Can be full URL or just domain path
+  ) {
+    const title = '💰 லாபம் பெற்றுள்ளீர்கள்!';
+    const message = `லாபம்: ₹${commission.toLocaleString()}`;
+    
+    const data = {
+      billId,
+      billNumber,
+      type: 'BILL_GENERATED',
+      amount,
+      commission,
+      timestamp: new Date().toISOString(),
+      deepLink: `/bills/${billId}`
+    };
+
+    // The imageUrl will be formatted automatically in sendPushNotification
+    return this.sendPushNotification(
+      playerIds,
+      title,
+      message,
+      data,
+      imageUrl
+    );
+  }
+
+  // For sending to all users
   async sendNotificationToAllUsers(
     title: string,
     message: string,
@@ -102,21 +148,25 @@ export class OneSignalService {
     imageUrl?: string,
   ) {
     try {
+      // Format image URL
+      const formattedImageUrl = this.formatImageUrl(imageUrl);
+      
       const payload: any = {
         app_id: this.appId,
         included_segments: ['All'],
         headings: { en: title },
         contents: { en: message },
         data: data || {},
-        big_picture: imageUrl,
-        chrome_web_image: imageUrl,
-        large_icon: this.configService.get('LOGO_URL', ''),
+        large_icon: 'https://dev.goltens.in/uploads/icon.png',
         android_accent_color: 'FF5722',
       };
 
-      if (imageUrl) {
-        payload.ios_attachments = { image: imageUrl };
-        payload.big_picture = imageUrl;
+      // Add image if provided
+      if (formattedImageUrl) {
+        payload.large_picture = formattedImageUrl;
+        payload.big_picture = formattedImageUrl;
+        payload.ios_attachments = { id1: formattedImageUrl };
+        payload.chrome_web_image = formattedImageUrl;
       }
 
       const response = await axios.post(
@@ -136,5 +186,23 @@ export class OneSignalService {
       this.logger.error('Failed to send bulk notification:', error.response?.data || error.message);
       throw error;
     }
+  }
+
+  // Test method to verify URL formatting
+  async testNotificationWithUrlFormatting(
+    playerId: string,
+    imageUrl: string
+  ) {
+    const formattedUrl = this.formatImageUrl(imageUrl);
+    this.logger.log(`Original URL: ${imageUrl}`);
+    this.logger.log(`Formatted URL: ${formattedUrl}`);
+    
+    return this.sendPushNotification(
+      [playerId],
+      'URL Format Test',
+      'Testing URL formatting',
+      { originalUrl: imageUrl, formattedUrl },
+      imageUrl
+    );
   }
 }
