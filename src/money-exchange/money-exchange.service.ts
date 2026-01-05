@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../core/services/prisma.service';
 import {
@@ -16,6 +17,7 @@ import {
   WalletSelectionDto,
 } from '../bill/dto/money-exchange.dto';
 import { Transaction, Bill, Account } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface MoneyExchangeResult {
   transaction: Transaction;
@@ -29,8 +31,10 @@ interface MoneyExchangeResult {
 
 @Injectable()
 export class MoneyExchangeService {
-  constructor(private prisma: PrismaService) {}
-
+ constructor(
+    private prisma: PrismaService,
+    @Inject(EventEmitter2) private eventEmitter: EventEmitter2, // Inject EventEmitter
+  ) {}
   async createMoneyExchange(
     createMoneyExchangeDto: CreateMoneyExchangeDto,
   ): Promise<MoneyExchangeResult> {
@@ -1092,7 +1096,17 @@ export class MoneyExchangeService {
     };
 
     const result = await this.createMoneyExchange(createMoneyExchangeDto);
-
+ // Emit bill generated event
+    this.eventEmitter.emit('bill.generated', {
+      billId: result.bill.id,
+      billNumber: result.bill.billNumber,
+      totalAmount: result.bill.totalAmount,
+      commission: result.bill.commission || 0,
+      customerName: result.bill.customerName,
+      serviceType: result.bill.serviceType,
+      generatedBy: 'system',
+      timestamp: new Date(),
+    });
     return this.transformToSimplifiedResponse(result, dto);
   }
 
@@ -1175,3 +1189,5 @@ export class MoneyExchangeService {
     };
   }
 }
+
+

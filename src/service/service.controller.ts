@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   Res,
+  UseInterceptors,
 } from '@nestjs/common';
 import express from 'express';
 import { ServiceService } from './service.service';
@@ -31,8 +32,14 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+
+import { BillNotificationInterceptor } from '../bill/interceptors/bill-notification.interceptor';
+
+
 @ApiTags('services')
 @Controller('services')
+@UseInterceptors(BillNotificationInterceptor)
+
 export class ServiceController {
   constructor(private readonly serviceService: ServiceService) {}
 

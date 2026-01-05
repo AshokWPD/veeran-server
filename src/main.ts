@@ -49,6 +49,8 @@ app.use(
       'http://localhost:3001',
       'http://bill.asho.in',
       'http://api.asho.in',
+      'https://veeran.asho.in',
+      'https://resilient-panda-f04150.netlify.app',
       'https://api.asho.in',
       'https://studio.asho.in',
     ], // Update this to your frontend URL

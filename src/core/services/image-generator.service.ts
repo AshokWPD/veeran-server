@@ -150,401 +150,7 @@ export class ImageGeneratorService {
     });
   }
 
-  // Keep your existing getNotificationTemplate() method
-  private getNotificationTemplate(
-    amount: number,
-    commission: number,
-    customerName?: string,
-    serviceType?: string,
-    logoUrl?: string,
-  ): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Poppins', 'Noto Sans Tamil', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            width: 1024px;
-            height: 512px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* Background pattern */
-        .background-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.05;
-            background-image: 
-                radial-gradient(circle at 25% 25%, #3b82f6 2px, transparent 2px),
-                radial-gradient(circle at 75% 75%, #8b5cf6 2px, transparent 2px);
-            background-size: 60px 60px;
-        }
-        
-        .notification-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-            position: relative;
-        }
-        
-        /* Left Side - Gradient with Logo */
-        .left-side {
-            flex: 1;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .left-side::before {
-            content: '';
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 30px 30px;
-            animation: float 20s linear infinite;
-        }
-        
-        @keyframes float {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-30px, -30px) rotate(360deg); }
-        }
-        
-        .logo-container {
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .logo-img {
-            max-width: 80px;
-            max-height: 80px;
-            border-radius: 50%;
-        }
-        
-        .tamil-title {
-            font-family: 'Noto Sans Tamil', sans-serif;
-            font-size: 32px;
-            font-weight: 800;
-            color: white;
-            text-align: center;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .english-title {
-            font-size: 18px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
-            text-align: center;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            position: relative;
-            z-index: 2;
-        }
-        
-        /* Right Side - Content */
-        .right-side {
-            flex: 2;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            padding: 50px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-        }
-        
-        .right-side::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 70%, rgba(99, 102, 241, 0.1) 100%);
-            pointer-events: none;
-        }
-        
-        .content-header {
-            margin-bottom: 30px;
-        }
-        
-        .greeting {
-            font-size: 28px;
-            font-weight: 700;
-            color: #f1f5f9;
-            margin-bottom: 10px;
-        }
-        
-        .greeting span {
-            color: #60a5fa;
-        }
-        
-        .message {
-            font-size: 18px;
-            color: #94a3b8;
-            line-height: 1.6;
-        }
-        
-        /* Amount Cards */
-        .amounts-container {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-        
-        .amount-card {
-            flex: 1;
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s ease;
-        }
-        
-        .amount-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .amount-card.total {
-            border-top: 4px solid #10b981;
-        }
-        
-        .amount-card.commission {
-            border-top: 4px solid #f59e0b;
-        }
-        
-        .card-label {
-            font-size: 16px;
-            color: #94a3b8;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .card-label i {
-            font-size: 20px;
-        }
-        
-        .card-value {
-            font-size: 36px;
-            font-weight: 800;
-            color: #f8fafc;
-        }
-        
-        .card-value.total {
-            color: #10b981;
-        }
-        
-        .card-value.commission {
-            color: #f59e0b;
-        }
-        
-        /* Commission Highlight */
-        .commission-highlight {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            margin-bottom: 20px;
-        }
-        
-        .commission-tamil {
-            font-family: 'Noto Sans Tamil', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: #fbbf24;
-            text-align: center;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .commission-english {
-            font-size: 16px;
-            color: #fde68a;
-            text-align: center;
-            margin-top: 5px;
-            letter-spacing: 1px;
-        }
-        
-        /* Footer */
-        .footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .customer-info {
-            font-size: 16px;
-            color: #cbd5e1;
-        }
-        
-        .customer-name {
-            color: #60a5fa;
-            font-weight: 600;
-        }
-        
-        .date-time {
-            font-size: 14px;
-            color: #94a3b8;
-            text-align: right;
-        }
-        
-        .time {
-            font-size: 16px;
-            color: #f1f5f9;
-            font-weight: 600;
-        }
-        
-        /* Icons */
-        .icon {
-            display: inline-block;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        
-        /* Currency formatting */
-        .currency {
-            font-size: 28px;
-            vertical-align: top;
-        }
-        
-        /* Glow effect */
-        .glow {
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-            from {
-                text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
-            }
-            to {
-                text-shadow: 0 0 20px rgba(245, 158, 11, 0.8), 0 0 30px rgba(245, 158, 11, 0.6);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="background-pattern"></div>
-    <div class="notification-container">
-        <!-- Left Side with Logo and Title -->
-        <div class="left-side">
-            <div class="logo-container">
-                ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo">` : '<span style="font-size: 50px; color: white;">💰</span>'}
-            </div>
-            <div class="tamil-title">பில் உருவாக்கப்பட்டது!</div>
-            <div class="english-title">New Payment Received</div>
-        </div>
-        
-        <!-- Right Side with Details -->
-        <div class="right-side">
-            <div class="content-header">
-                <h2 class="greeting">🎉 Congratulations! <span>You've earned commission</span></h2>
-                <p class="message">A new payment has been successfully processed in your account</p>
-            </div>
-            
-            <div class="amounts-container">
-                <div class="amount-card total">
-                    <div class="card-label">
-                        <span class="icon">💰</span>
-                        Total Amount
-                    </div>
-                    <div class="card-value total">
-                        <span class="currency">₹</span>${amount.toLocaleString('en-IN')}
-                    </div>
-                </div>
-                
-                <div class="amount-card commission">
-                    <div class="card-label">
-                        <span class="icon">💸</span>
-                        Your Commission
-                    </div>
-                    <div class="card-value commission glow">
-                        <span class="currency">₹</span>${commission.toLocaleString('en-IN')}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="commission-highlight">
-                <div class="commission-tamil">லாபம் பெற்றுள்ளீர்கள்!</div>
-                <div class="commission-english">Profit Earned Successfully</div>
-            </div>
-            
-            <div class="footer">
-                <div class="customer-info">
-                    ${customerName ? `Customer: <span class="customer-name">${customerName}</span>` : 'Payment Received'}
-                </div>
-                <div class="date-time">
-                    <div class="time">${new Date().toLocaleDateString('en-IN', { 
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                    })} ${new Date().toLocaleTimeString('en-IN', { 
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true 
-                    })}</div>
-                    Keep up the great work!
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Icons as SVG for better rendering -->
-    <svg style="display: none;">
-        <symbol id="rupee-icon" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M13.66 7C13.1 5.82 11.9 5 10.5 5H6V3h12v2h-3.25v1.25H18v2h-2.25V11H18v2h-8v2.5h5.5v1.25H10.5V19H6v-2h4.5v-1.25H6V13.5h4.5v-5H7.5V7h6.16z"/>
-        </symbol>
-        <symbol id="commission-icon" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z"/>
-        </symbol>
-    </svg>
-</body>
-</html>
-    `;
-  }
+
 
   private createFallbackUrl(billNumber: string, amount: number, commission: number): string {
     const baseUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
@@ -570,6 +176,312 @@ export class ImageGeneratorService {
       this.logger.error('Failed to cleanup old images:', error);
     }
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+private getNotificationTemplate(
+    amount: number,
+    commission: number,
+    customerName?: string,
+    serviceType?: string,
+    logoUrl?: string,
+  ): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans Tamil', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+            width: 1024px;
+            height: 512px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 1024px;
+            height: 512px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Top Section - Logo & Shop Name */
+        .top-section {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            border-bottom: 6px solid #fbbf24;
+        }
+        
+        .logo-box {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #fbbf24;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo-box img {
+            width: 45px;
+            height: 45px;
+            object-fit: contain;
+        }
+        
+        .shop-title {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Main Section - Amounts */
+        .main-section {
+            flex: 1;
+            display: flex;
+            height: 292px;
+            padding: 40px 50px;
+            gap: 40px;
+        }
+        
+        /* Amount Cards */
+        .amount-card {
+            flex: 1;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            border: 4px solid;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .total-card {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+        
+        .profit-card {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+        
+        .amount-symbol {
+            font-size: 60px;
+            margin-bottom: 15px;
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            color: #374151;
+            font-weight: bold;
+        }
+        
+        .amount-label {
+            font-size: 26px;
+            font-weight: 800;
+            color: #374151;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .amount-value {
+            font-size: 80px;
+            font-weight: 900;
+            color: #111827;
+            line-height: 1;
+            text-align: center;
+        }
+        
+        .total-value {
+            color: #1d4ed8;
+        }
+        
+        .profit-value {
+            color: #047857;
+        }
+        
+        /* Bottom Section - Celebration Message */
+        .bottom-section {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            height: 130px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-top: 6px solid #1e40af;
+        }
+        
+        .celebration-text {
+            font-size: 34px;
+            font-weight: 900;
+            color: #1e3a8a;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+        }
+        
+        .sub-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: #78350f;
+            margin-top: 8px;
+        }
+        
+        /* Currency Symbol */
+        .currency {
+            font-size: 56px;
+            vertical-align: top;
+            margin-right: 8px;
+        }
+        
+        /* Unicode Symbols for Money - Will render correctly */
+        .money-symbol {
+            font-family: Arial, sans-serif;
+            font-size: 50px;
+            font-weight: bold;
+        }
+        
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .amount-card {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .profit-card {
+            animation-delay: 0.3s;
+            animation-fill-mode: both;
+        }
+        
+        /* Glow effect for profit */
+        @keyframes glow {
+            0% { box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15), 0 0 20px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15), 0 0 40px rgba(16, 185, 129, 0.6); }
+            100% { box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15), 0 0 20px rgba(16, 185, 129, 0.3); }
+        }
+        
+        .profit-card {
+            animation: glow 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Top: Logo & Shop Name -->
+        <div class="top-section">
+            ${logoUrl ? `<div class="logo-box">
+                <img src="${logoUrl}" alt="Logo">
+            </div>` : '<div class="logo-box" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);"><div class="money-symbol" style="color: white;">₹</div></div>'}
+            <div class="shop-title">ஸ்ரீ வீரன் சேவை மையம்</div>
+        </div>
+        
+        <!-- Middle: BIG Amounts Only -->
+        <div class="main-section">
+            <div class="amount-card total-card">
+                <div class="amount-symbol" style="color: #1d4ed8;">₹</div>
+                <div class="amount-label">மொத்த தொகை</div>
+                <div class="amount-value total-value">
+                    <span class="currency">₹</span>${amount.toLocaleString('ta-IN')}
+                </div>
+            </div>
+            
+            <div class="amount-card profit-card">
+                <div class="amount-symbol" style="color: #047857;">↑</div>
+                <div class="amount-label">உங்கள் லாபம்</div>
+                <div class="amount-value profit-value">
+                    <span class="currency">₹</span>${commission.toLocaleString('ta-IN')}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom: Celebration Message -->
+        <div class="bottom-section">
+            <div class="celebration-text">★ லாபம் பெற்றுள்ளீர்கள்! வாழ்த்துக்கள்! ★</div>
+            <div class="sub-text">◆ ஸ்ரீ மதுரை வீரன் துணை  ◆</div>
+        </div>
+    </div>
+    
+    <script>
+        // Simple script to ensure content is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force redraw to ensure animations work
+            const cards = document.querySelectorAll('.amount-card');
+            cards.forEach(card => {
+                card.style.display = 'none';
+                setTimeout(() => {
+                    card.style.display = 'flex';
+                }, 10);
+            });
+        });
+    </script>
+</body>
+</html>
+    `;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 }
 
 

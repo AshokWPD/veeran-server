@@ -151,17 +151,34 @@ export class BillController {
     );
   }
 
-  @Post('simplified-money-exchange')
-  @ApiOperation({ summary: 'Create simplified money exchange transaction' })
-  @ApiResponse({
-    status: 201,
-    description: 'Simplified money exchange completed successfully',
-  })
-  createSimplifiedMoneyExchange(
-    @Body() simplifiedMoneyExchangeDto: SimplifiedMoneyExchangeDto,
-  ) {
-    return this.billService.createSimplifiedMoneyExchange(
-      simplifiedMoneyExchangeDto,
-    );
-  }
+
+  // In bill.controller.ts
+@Post('simplified-money-exchange')
+@ApiOperation({ summary: 'Create simplified money exchange transaction' })
+@ApiResponse({
+  status: 201,
+  description: 'Simplified money exchange completed successfully',
+})
+createSimplifiedMoneyExchange(
+  @Body() simplifiedMoneyExchangeDto: SimplifiedMoneyExchangeDto,
+) {
+  // Call the bill service method instead of moneyExchangeService
+  return this.billService.createSimplifiedMoneyExchange(
+    simplifiedMoneyExchangeDto,
+  );
+}
+
+  // @Post('simplified-money-exchange')
+  // @ApiOperation({ summary: 'Create simplified money exchange transaction' })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Simplified money exchange completed successfully',
+  // })
+  // createSimplifiedMoneyExchange(
+  //   @Body() simplifiedMoneyExchangeDto: SimplifiedMoneyExchangeDto,
+  // ) {
+  //   return this.billService.createSimplifiedMoneyExchange(
+  //     simplifiedMoneyExchangeDto,
+  //   );
+  // }
 }

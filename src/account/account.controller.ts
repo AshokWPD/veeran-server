@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { CreateAccountDto } from './dto/create-account.dto';
@@ -25,9 +26,11 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+import { BillNotificationInterceptor } from '../bill/interceptors/bill-notification.interceptor';
 
 @ApiTags('accounts')
 @Controller('accounts')
+@UseInterceptors(BillNotificationInterceptor)
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 

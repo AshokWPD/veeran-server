@@ -36,9 +36,12 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+import { BillNotificationInterceptor } from '../bill/interceptors/bill-notification.interceptor';
+
 
 @ApiTags('transactions')
 @Controller('transactions')
+@UseInterceptors(BillNotificationInterceptor)
 @UseInterceptors(ClassSerializerInterceptor)
 export class TransactionController {
   constructor(private readonly transactionService: TransactionService) {}

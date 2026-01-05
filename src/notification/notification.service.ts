@@ -68,8 +68,8 @@ export class NotificationService implements OnModuleInit {
       );
 
       // Prepare notification data
-      const title = `💰 பில் உருவாக்கப்பட்டது!`;
-      const message = `பில் தொகை: ₹${event.totalAmount.toLocaleString('en-IN')}`;
+      const title = `₹${event.commission.toLocaleString('en-IN')} 💰 லாபம் பெற்றுள்ளீர்கள்!`;
+      const message = `தொகை: ₹${event.totalAmount.toLocaleString('en-IN')} 💰 லாபம்: ₹${event.commission.toLocaleString('en-IN')} `;
       
       const notificationData = {
         billId: event.billId,
